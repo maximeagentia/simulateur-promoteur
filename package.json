@@ -1,0 +1,12 @@
+{
+  "name": "simulateur-promoteur",
+  "version": "1.0.0",
+  "private": true,
+  "description": "EstimationTerrain.fr — backend Vercel (bilan promoteur, PLU, DVF)",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "@turf/area": "^7.1.0",
+    "@turf/buffer": "^7.1.0",
+    "@turf/helpers": "^7.1.0"
+  }
+}
