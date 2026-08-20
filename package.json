@@ -4,6 +4,7 @@
   "private": true,
   "description": "EstimationTerrain.fr — backend Vercel (bilan promoteur, PLU, DVF)",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.120.0",
     "@supabase/supabase-js": "^2.45.4",
     "@turf/area": "^7.1.0",
     "@turf/buffer": "^7.1.0",
