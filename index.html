@@ -117,6 +117,7 @@ nav{position:sticky;top:0;z-index:200;background:var(--nuit);border-bottom:1px s
 .fourchette-val em{color:var(--vert);font-style:normal}
 .fourchette-pitch{font-size:12px;color:var(--gris);line-height:1.5;margin-bottom:0}
 .fourchette-urgence{display:inline-block;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.25);border-radius:20px;padding:4px 10px;font-size:11px;color:var(--or);margin-top:8px}
+.fourchette-source{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);font-size:11px;color:var(--gris);line-height:1.7;text-align:left}
 
 .cta-etude{background:var(--vert);color:#fff;border:none;border-radius:8px;padding:11px;width:100%;font-family:var(--font-body);font-size:13px;font-weight:600;cursor:pointer;margin-bottom:.375rem;transition:background .2s}
 .cta-etude:hover{background:var(--vert-dark)}
@@ -913,6 +914,8 @@ function afficherResultat(k,data){
     fbEl.style.display='none';
   }
 
+  afficherProvenance(k,data);
+
   state[k]=Object.assign({},state[k]||{},_st);
 
   // Airtable — enregistrer la simulation dans tous les cas
@@ -937,6 +940,55 @@ function afficherResultat(k,data){
     val_high:vt&&vt.high||0,
     score:score
   });
+}
+
+// ─── Provenance des données — badge de confiance ──────────────────────────────
+// Distingue une estimation appuyée sur des données réelles (PLU extrait,
+// transactions DVF locales) d'une estimation générique (table statique,
+// fallback départemental), et signale les risques connus à proximité.
+// N'invente aucun ajustement de prix — informationnel uniquement.
+function afficherProvenance(k,data){
+  var bilan=data.bilan||{};
+  if(!bilan.constructible)return;
+  var box=document.getElementById('fb-'+k);
+  if(!box)return;
+  var el=document.getElementById('fsrc-'+k);
+  if(!el){
+    el=document.createElement('div');
+    el.id='fsrc-'+k;
+    el.className='fourchette-source';
+    box.appendChild(el);
+  }
+
+  var lignes=[];
+  var zoneReelle=bilan.source_zone==='plu_zones (extraction réelle)';
+  lignes.push(zoneReelle
+    ? '✓ Règles PLU officielles extraites pour cette zone'
+    : '△ Zone PLU pas encore extraite — estimation générique, à affiner');
+
+  var dvf=data.dvf||{};
+  if(dvf.nb_transactions){
+    lignes.push('✓ Prix marché : '+dvf.nb_transactions+' transactions réelles ('+(dvf.type||'logements')+')');
+  } else {
+    lignes.push('△ Prix marché : estimation départementale, pas de transaction DVF locale trouvée');
+  }
+
+  var risques=data.risques||{};
+  var alertes=[];
+  if(risques.zonage_sismique&&Number(risques.zonage_sismique.code_zone)>=3){
+    alertes.push('zone sismique '+risques.zonage_sismique.code_zone);
+  }
+  if(risques.cavites&&risques.cavites.nb>0){
+    alertes.push(risques.cavites.nb+' cavité(s) connue(s) à proximité');
+  }
+  if(risques.inondation&&risques.inondation.nb_zones>0){
+    alertes.push('zone à risque inondation à proximité');
+  }
+  if(alertes.length){
+    lignes.push('⚠ '+alertes.join(' · '));
+  }
+
+  el.innerHTML=lignes.map(function(l){return '<div>'+l+'</div>'}).join('');
 }
 
 // ─── Lancer simulation ────────────────────────────────────────────────────────

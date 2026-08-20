@@ -1,12 +1,19 @@
 {
   "version": 2,
   "routes": [
-    { "src": "/api/plu",      "dest": "/api/plu.js" },
-    { "src": "/api/airtable", "dest": "/api/airtable.js" },
-    { "src": "/api/sheet",    "dest": "/api/sheet.js" },
-    { "src": "/api/rapport",  "dest": "/api/rapport.js" },
-    { "src": "/admin",        "dest": "/admin.html" },
-    { "src": "/rapport",      "dest": "/api/rapport.js" },
-    { "src": "/(.*)",         "dest": "/index.html" }
-  ]
+    { "src": "/api/plu",              "dest": "/api/plu.js" },
+    { "src": "/api/airtable",         "dest": "/api/airtable.js" },
+    { "src": "/api/sheet",            "dest": "/api/sheet.js" },
+    { "src": "/api/rapport",          "dest": "/api/rapport.js" },
+    { "src": "/api/cron/extract-plu", "dest": "/api/cron/extract-plu.js" },
+    { "src": "/admin",                "dest": "/admin.html" },
+    { "src": "/rapport",              "dest": "/api/rapport.js" },
+    { "src": "/(.*)",                 "dest": "/index.html" }
+  ],
+  "crons": [
+    { "path": "/api/cron/extract-plu", "schedule": "0 3 * * *" }
+  ],
+  "functions": {
+    "api/cron/extract-plu.js": { "maxDuration": 60 }
+  }
 }

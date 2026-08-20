@@ -1,7 +1,14 @@
 // api/plu.js — EstimationTerrain.fr
 // Backend serverless Vercel (CommonJS)
 // APIs : apicarto.ign.fr (GPU + cadastre) · DVF etalab · BAN
-// Source PLUi : Vallée Sud Grand Paris, approuvé 10/12/2025
+// Zone PLU : lookup Supabase (plu_zones, règles réelles extraites) avec repli
+// sur la table statique ci-dessous (calibrée sur le seul PLUi Vallée Sud Grand
+// Paris) tant qu'une commune n'a pas encore été extraite. Voir supabase/migrations.
+
+const { getZonePLUFromSupabase } = require('./_lib/supabase');
+const { surfaceApresReculs } = require('./_lib/geometrie');
+const { getPrixMarcheSupabase } = require('./_lib/dvf');
+const { getRisques } = require('./_lib/risques');
 
 // ─── Table zones PLU (extraite du PLUi Vallée Sud + valeurs nationales) ───────
 const ZONES_PLU = {
@@ -85,14 +92,22 @@ function resolveZone(code) {
 // 10. Marge promoteur min = CA TTC × 20%
 // 11. CF = CA HT - construction - archi - commerçialisation - financiers - marge
 // 12. Fourchette: low = CF × 0.85, high = low × 1.35
-function calculBilan(surfaceTerrain, zoneKey, prixMarche) {
-  const zone = ZONES_PLU[zoneKey] || ZONES_PLU["_fallback"];
+function calculBilan(surfaceTerrain, zoneKey, prixMarche, zoneReelle, parcelGeometry) {
+  // zoneReelle (Supabase, plu_zones) prévaut sur la table statique quand disponible.
+  const zoneStatique = ZONES_PLU[zoneKey] || ZONES_PLU["_fallback"];
+  const zone = zoneReelle ? {
+    label: zoneReelle.zone_label || zoneStatique.label,
+    ces: zoneReelle.ces != null ? Number(zoneReelle.ces) : zoneStatique.ces,
+    hauteur: zoneReelle.hauteur_m != null ? Number(zoneReelle.hauteur_m) : zoneStatique.hauteur,
+  } : zoneStatique;
+  const source_zone = zoneReelle ? "plu_zones (extraction réelle)" : "table statique (générique)";
 
   if (zone.ces === 0) {
     return {
       constructible: false,
       zone_label: zone.label,
       zone_key: zoneKey,
+      source_zone,
       raison: "Zone non constructible pour le logement"
     };
   }
@@ -116,7 +131,17 @@ function calculBilan(surfaceTerrain, zoneKey, prixMarche) {
     : prixNeufEstime > 3200 ? 0.17
     : 0.15;
 
-  const surface_au_sol = Math.round(surfaceTerrain * zone.ces);
+  const surface_au_sol_ces = Math.round(surfaceTerrain * zone.ces);
+  // Emprise après reculs réels (érosion géométrique du polygone cadastral) —
+  // seulement si on a une géométrie ET des reculs extraits (zoneReelle).
+  // Les deux contraintes s'appliquent simultanément : on garde la plus restrictive.
+  const reculFacade = zoneReelle && zoneReelle.recul_facade_m != null ? Number(zoneReelle.recul_facade_m) : null;
+  const reculLimites = zoneReelle && zoneReelle.recul_limites_m != null ? Number(zoneReelle.recul_limites_m) : null;
+  const surface_apres_reculs = surfaceApresReculs(parcelGeometry, reculFacade, reculLimites);
+  const surface_au_sol = surface_apres_reculs !== null
+    ? Math.min(surface_au_sol_ces, surface_apres_reculs)
+    : surface_au_sol_ces;
+  const source_emprise = surface_apres_reculs !== null ? "géométrie réelle (reculs)" : "CES seul";
   const nb_niveaux     = Math.floor(zone.hauteur / H_ETAGE);
   const shab_brute     = Math.round(surface_au_sol * nb_niveaux);
   const shab_nette     = Math.round(shab_brute * 0.85);
@@ -146,11 +171,15 @@ function calculBilan(surfaceTerrain, zoneKey, prixMarche) {
     constructible: true,
     zone_label: zone.label,
     zone_key: zoneKey,
+    source_zone,
+    source_emprise,
     parametres: {
       ces: zone.ces,
       hauteur_acrotere: zone.hauteur,
       nb_niveaux_calcules: nb_niveaux,
-      h_etage: H_ETAGE
+      h_etage: H_ETAGE,
+      recul_facade_m: reculFacade,
+      recul_limites_m: reculLimites
     },
     calcul: {
       surface_terrain: Math.round(surfaceTerrain),
@@ -357,6 +386,7 @@ async function getSurface(lat, lon) {
     surface: props.contenance ? Math.round(props.contenance) : null,
     section: props.section,
     numero: props.numero,
+    geometry: data.features[0].geometry || null,
     commune: props.nom_com || props.commune || props.nomcom,
     // Apicarto retourne dep_abs (ex:"04") + com_abs (ex:"152")
     // ou code_dep + code_com selon la version
@@ -407,14 +437,19 @@ module.exports = async function handler(req, res) {
 
   try {
     // ── Appels parallèles ──
-    const [zoneResult, cadastreResult] = await Promise.all([
+    const [zoneResult, cadastreResult, risquesResult] = await Promise.all([
       getZonePLU(latF, lonF),
-      getSurface(latF, lonF)
+      getSurface(latF, lonF),
+      getRisques(latF, lonF)
     ]);
     // DVF après cadastre pour avoir le code commune
     // Priorité: 1) insee BAN (passé par le frontend), 2) code cadastre, 3) null
     const codeCommune = insee || (cadastreResult && cadastreResult.code_commune) || null;
-    const dvfResult = await getPrixMarche(latF, lonF, codeCommune);
+    // Base locale (Supabase, DVF national ingéré) d'abord — instantané et
+    // couverture complète une fois peuplée ; repli sur l'appel live cquest
+    // inchangé si Supabase n'est pas configuré ou pas encore populé pour
+    // cette zone.
+    const dvfResult = (await getPrixMarcheSupabase(latF, lonF)) || (await getPrixMarche(latF, lonF, codeCommune));
 
     // ── Surface terrain ──
     let surfaceTerrain = parseFloat(surface) || 0;
@@ -460,8 +495,12 @@ module.exports = async function handler(req, res) {
       dvfDetail.source += ' (plancher 1500)';
     }
 
+    // ── Zone réelle (Supabase, plu_zones) si extraite, sinon repli table statique ──
+    const zoneReelle = await getZonePLUFromSupabase(codeCommune, codeZone);
+
     // ── Bilan promoteur ──
-    const bilan = calculBilan(surfaceTerrain, zoneKey, prixMarche);
+    const parcelGeometry = cadastreResult ? cadastreResult.geometry : null;
+    const bilan = calculBilan(surfaceTerrain, zoneKey, prixMarche, zoneReelle, parcelGeometry);
 
     // ── Réponse ──
     return res.status(200).json({
@@ -471,24 +510,28 @@ module.exports = async function handler(req, res) {
       cadastre: cadastreResult,
       zone_plu: {
         code: codeZone || "non identifiée",
-        libelle: zoneInfo.label,
+        libelle: bilan.zone_label || zoneInfo.label,
         libelle_long: zoneResult ? zoneResult.libelle_long : null,
         key: zoneKey,
-        source: zoneResult ? "GPU IGN apicarto" : "fallback"
+        source: zoneResult ? "GPU IGN apicarto" : "fallback",
+        source_regles: bilan.source_zone || "table statique (générique)",
+        source_emprise: bilan.source_emprise || null
       },
       prix_marche_m2: prixMarche,
       dvf: dvfDetail,
+      risques: risquesResult,
       bilan,
-      // Détail complet pour email admin
+      // Détail complet pour email admin — reflète les valeurs réellement utilisées
+      // (zone Supabase si extraite, sinon table statique), pas systématiquement le fallback.
       _admin: {
         etapes: [
-          `1. Zone PLU : ${codeZone || "non identifiée"} → ${zoneInfo.label}`,
-          `   Source : ${zoneResult ? "GPU IGN apicarto.ign.fr" : "Fallback (GPU indisponible)"}`,
-          `2. CES (emprise au sol max) : ${(zoneInfo.ces * 100).toFixed(0)}%`,
+          `1. Zone PLU : ${codeZone || "non identifiée"} → ${bilan.zone_label || zoneInfo.label}`,
+          `   Source règles : ${bilan.source_zone || "table statique (générique)"} — Source zonage : ${zoneResult ? "GPU IGN apicarto.ign.fr" : "Fallback (GPU indisponible)"}`,
+          `2. CES (emprise au sol max) : ${bilan.parametres ? (bilan.parametres.ces * 100).toFixed(0) : (zoneInfo.ces * 100).toFixed(0)}%`,
           `3. Surface terrain : ${Math.round(surfaceTerrain)} m²`,
-          `4. Surface au sol = ${Math.round(surfaceTerrain)} × ${zoneInfo.ces} = ${Math.round(surfaceTerrain * zoneInfo.ces)} m²`,
-          `5. Hauteur acrotère PLU : ${zoneInfo.hauteur} m → ${Math.floor(zoneInfo.hauteur / 2.80)} niveaux (h/2.80m)`,
-          `6. SHAB brute = ${Math.round(surfaceTerrain * zoneInfo.ces)} × ${Math.floor(zoneInfo.hauteur / 2.80)} = ${bilan.calcul ? bilan.calcul.shab_brute : 0} m²`,
+          `4. Surface au sol = ${bilan.calcul ? bilan.calcul.surface_au_sol : Math.round(surfaceTerrain * zoneInfo.ces)} m² (${bilan.source_emprise || "CES seul"})`,
+          `5. Hauteur acrotère PLU : ${bilan.parametres ? bilan.parametres.hauteur_acrotere : zoneInfo.hauteur} m → ${bilan.parametres ? bilan.parametres.nb_niveaux_calcules : Math.floor(zoneInfo.hauteur / 2.80)} niveaux (h/2.80m)`,
+          `6. SHAB brute = ${bilan.calcul ? bilan.calcul.shab_brute : 0} m²`,
           `7. SHAB nette (×0.85, déduction parties communes) = ${bilan.calcul ? bilan.calcul.shab_nette : 0} m²`,
           `8. Prix neuf : ${prixMarche} €/m² (${dvfDetail ? dvfDetail.source : "fallback"})`,
           `9. CA TTC = ${bilan.calcul ? bilan.calcul.shab_nette : 0} m² × ${prixMarche} €/m² = ${bilan.calcul ? bilan.calcul.ca_ttc.toLocaleString("fr-FR") : 0} €`,
