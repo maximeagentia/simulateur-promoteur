@@ -7,6 +7,7 @@
 
 const { getZonePLUFromSupabase } = require('./_lib/supabase');
 const { surfaceApresReculs } = require('./_lib/geometrie');
+const { getPrixMarcheSupabase } = require('./_lib/dvf');
 
 // ─── Table zones PLU (extraite du PLUi Vallée Sud + valeurs nationales) ───────
 const ZONES_PLU = {
@@ -442,7 +443,11 @@ module.exports = async function handler(req, res) {
     // DVF après cadastre pour avoir le code commune
     // Priorité: 1) insee BAN (passé par le frontend), 2) code cadastre, 3) null
     const codeCommune = insee || (cadastreResult && cadastreResult.code_commune) || null;
-    const dvfResult = await getPrixMarche(latF, lonF, codeCommune);
+    // Base locale (Supabase, DVF national ingéré) d'abord — instantané et
+    // couverture complète une fois peuplée ; repli sur l'appel live cquest
+    // inchangé si Supabase n'est pas configuré ou pas encore populé pour
+    // cette zone.
+    const dvfResult = (await getPrixMarcheSupabase(latF, lonF)) || (await getPrixMarche(latF, lonF, codeCommune));
 
     // ── Surface terrain ──
     let surfaceTerrain = parseFloat(surface) || 0;

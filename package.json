@@ -8,6 +8,7 @@
     "@supabase/supabase-js": "^2.45.4",
     "@turf/area": "^7.1.0",
     "@turf/buffer": "^7.1.0",
-    "@turf/helpers": "^7.1.0"
+    "@turf/helpers": "^7.1.0",
+    "csv-parse": "^7.0.2"
   }
 }
