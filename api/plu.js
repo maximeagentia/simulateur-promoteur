@@ -8,6 +8,7 @@
 const { getZonePLUFromSupabase } = require('./_lib/supabase');
 const { surfaceApresReculs } = require('./_lib/geometrie');
 const { getPrixMarcheSupabase } = require('./_lib/dvf');
+const { getRisques } = require('./_lib/risques');
 
 // ─── Table zones PLU (extraite du PLUi Vallée Sud + valeurs nationales) ───────
 const ZONES_PLU = {
@@ -436,9 +437,10 @@ module.exports = async function handler(req, res) {
 
   try {
     // ── Appels parallèles ──
-    const [zoneResult, cadastreResult] = await Promise.all([
+    const [zoneResult, cadastreResult, risquesResult] = await Promise.all([
       getZonePLU(latF, lonF),
-      getSurface(latF, lonF)
+      getSurface(latF, lonF),
+      getRisques(latF, lonF)
     ]);
     // DVF après cadastre pour avoir le code commune
     // Priorité: 1) insee BAN (passé par le frontend), 2) code cadastre, 3) null
@@ -517,6 +519,7 @@ module.exports = async function handler(req, res) {
       },
       prix_marche_m2: prixMarche,
       dvf: dvfDetail,
+      risques: risquesResult,
       bilan,
       // Détail complet pour email admin — reflète les valeurs réellement utilisées
       // (zone Supabase si extraite, sinon table statique), pas systématiquement le fallback.
