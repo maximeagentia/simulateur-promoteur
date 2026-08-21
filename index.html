@@ -1,6 +1,22 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+<!-- Google tag (gtag.js) — posée immédiatement pour être détectée par les
+     outils Google standard, mais consentement par défaut refusé (Consent
+     Mode v2) : aucun cookie de mesure n'est écrit ni aucune donnée envoyée
+     tant que le bandeau cookies plus bas dans la page n'a pas été accepté.
+     Voir repondreCookie()/accorderConsentement() qui passent le consentement
+     à 'granted' au clic sur "Accepter". -->
+<script>
+window.dataLayer=window.dataLayer||[];
+function gtag(){dataLayer.push(arguments)}
+gtag('consent','default',{'analytics_storage':'denied'});
+</script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-QXVGLJ4P0H"></script>
+<script>
+gtag('js',new Date());
+gtag('config','G-QXVGLJ4P0H');
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Estimation terrain constructible gratuite — Vendez au meilleur prix | EstimationTerrain.fr</title>
@@ -787,35 +803,23 @@ function showPage(id){
 }
 
 // ─── Bandeau cookies ──────────────────────────────────────────────────────────
-// Aucun cookie de mesure/publicitaire n'existe encore sur le site — ce
-// mécanisme prépare le point d'accroche (localStorage 'cookie_consent') pour
-// quand GA4/Ads seront ajoutés, sans attendre ce moment pour être conforme.
+// La balise gtag.js est posée inconditionnellement dans <head> (détectable
+// par les outils Google), mais démarre en consentement refusé (Consent Mode
+// v2, voir <head>) : aucune donnée n'est envoyée à Google tant que
+// accorderConsentement() n'a pas été appelé, ici au clic "Accepter".
 function initCookieBanner(){
   var choix;
   try{choix=localStorage.getItem('cookie_consent')}catch(e){choix=null}
   if(!choix)document.getElementById('cookie-banner').classList.add('show');
-  else if(choix==='accepted')chargerGA4();
+  else if(choix==='accepted')accorderConsentement();
 }
 function repondreCookie(valeur){
   try{localStorage.setItem('cookie_consent',valeur)}catch(e){}
   document.getElementById('cookie-banner').classList.remove('show');
-  if(valeur==='accepted')chargerGA4();
+  if(valeur==='accepted')accorderConsentement();
 }
-
-// ─── Google Analytics 4 — chargé uniquement si consentement accepté ──────────
-const GA_MEASUREMENT_ID='G-QXVGLJ4P0H';
-var _gaCharge=false;
-function chargerGA4(){
-  if(_gaCharge||!GA_MEASUREMENT_ID||GA_MEASUREMENT_ID==='G-XXXXXXXXXX')return;
-  _gaCharge=true;
-  var s=document.createElement('script');
-  s.async=true;
-  s.src='https://www.googletagmanager.com/gtag/js?id='+GA_MEASUREMENT_ID;
-  document.head.appendChild(s);
-  window.dataLayer=window.dataLayer||[];
-  window.gtag=function(){dataLayer.push(arguments)};
-  gtag('js',new Date());
-  gtag('config',GA_MEASUREMENT_ID);
+function accorderConsentement(){
+  gtag('consent','update',{'analytics_storage':'granted'});
 }
 
 // ─── Utilitaires ──────────────────────────────────────────────────────────────
