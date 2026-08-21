@@ -240,6 +240,18 @@ nav{position:sticky;top:0;z-index:200;background:var(--nuit);border-bottom:1px s
 .mrow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .modal-submit{width:100%;padding:13px;background:var(--vert);color:#fff;border:none;border-radius:8px;font-family:var(--font-display);font-size:14px;font-weight:700;cursor:pointer;margin-top:.5rem;transition:background .2s}
 .modal-submit:hover{background:var(--vert-dark)}.modal-submit:disabled{opacity:.5;cursor:not-allowed}
+.consent-row{display:flex;align-items:flex-start;gap:8px;font-size:12px;color:var(--gris);line-height:1.5;margin:.75rem 0 .25rem;cursor:pointer}
+.consent-row input{margin-top:2px;flex-shrink:0}
+.consent-row a{color:var(--vert);text-decoration:underline;cursor:pointer}
+
+.cookie-banner{display:none;position:fixed;left:0;right:0;bottom:0;z-index:2000;background:var(--nuit);border-top:1px solid var(--nuit3);padding:1rem 1.25rem;box-shadow:0 -8px 24px rgba(0,0,0,.3);gap:1rem;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.cookie-banner.show{display:flex}
+.cookie-banner p{margin:0;font-size:12.5px;color:var(--gris);line-height:1.5;max-width:640px}
+.cookie-banner a{color:var(--vert);text-decoration:underline;cursor:pointer}
+.cookie-actions{display:flex;gap:.6rem;flex-shrink:0}
+.cookie-btn{padding:9px 18px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font-body);border:1px solid var(--nuit3)}
+.cookie-refuse{background:transparent;color:var(--gris)}
+.cookie-accept{background:var(--vert);color:#fff;border-color:var(--vert)}
 .modal-ok{display:none;text-align:center;padding:1.5rem;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:10px;margin-top:1rem}
 .modal-ok-title{font-family:var(--font-display);font-size:1.1rem;color:var(--vert);margin-bottom:.5rem}
 .modal-ok-text{font-size:13px;color:var(--gris);line-height:1.7}
@@ -622,6 +634,7 @@ footer{padding:2rem 1.5rem;flex-direction:column;text-align:center}}
         <div class="mfield"><label>Zones géographiques ciblées</label><input type="text" id="op-zones" placeholder="ex : 92, 78, 91 — Ile-de-France Sud"/></div>
         <div class="mfield"><label>Surface terrain minimum recherchée (m²)</label><input type="number" id="op-surface" placeholder="300"/></div>
         <div class="mfield"><label>Message (optionnel)</label><textarea id="op-message" placeholder="Décrivez vos critères opérationnels spécifiques..."></textarea></div>
+        <label class="consent-row"><input type="checkbox" id="op-consent"/> J'accepte la <a id="op-consent-link">politique de confidentialité</a></label>
         <button class="modal-submit" id="op-submit-btn">Soumettre ma candidature</button>
         <div class="modal-err" id="op-err">Une erreur est survenue. Veuillez réessayer.</div>
         <div class="modal-ok" id="op-ok">
@@ -666,7 +679,7 @@ footer{padding:2rem 1.5rem;flex-direction:column;text-align:center}}
     <div class="mentions-inner">
       <h2>Mentions légales</h2>
       <h3>Éditeur du site</h3>
-      <p>EstimationTerrain.fr est édité par [Nom de la société], [Forme juridique], immatriculée au RCS de [Ville] sous le numéro [SIREN], dont le siège social est situé au [Adresse].<br>Contact : contact@estimationterrain.fr</p>
+      <p>EstimationTerrain.fr est édité par MKL Conseils, [forme juridique à compléter], immatriculée au RCS de [ville à compléter] sous le numéro [SIREN à compléter], dont le siège social est situé au [adresse à compléter].<br>Contact : contact@estimationterrain.fr</p>
       <h3>Nature de l'activité</h3>
       <p>EstimationTerrain.fr est un outil d'information et d'estimation foncière. Il ne constitue pas une agence immobilière au sens de la loi Hoguet du 2 janvier 1970 et n'exerce pas d'activité d'entremise immobilière.</p>
       <p>L'activité consiste à : fournir gratuitement une estimation indicative du potentiel constructible ; collecter, avec accord explicite, des données relatives au bien ; transmettre, avec accord préalable, ces données à des opérateurs fonciers dans le cadre d'une mise en relation commerciale. Cette activité ne requiert pas de carte professionnelle T.</p>
@@ -677,6 +690,39 @@ footer{padding:2rem 1.5rem;flex-direction:column;text-align:center}}
       <p>Les estimations ont un caractère purement indicatif et ne constituent pas une offre d'achat ni un avis de valeur opposable.</p>
       <h3>Hébergement</h3>
       <p>Vercel Inc., 340 Pine Street, Suite 701, San Francisco, California 94104, États-Unis.</p>
+    </div>
+  </section>
+</div>
+
+<!-- ══ POLITIQUE DE CONFIDENTIALITÉ ═════════════════════════════════════════ -->
+<div class="page" id="page-confidentialite">
+  <section class="mentions">
+    <div class="mentions-inner">
+      <h2>Politique de confidentialité</h2>
+
+      <h3>Responsable du traitement</h3>
+      <p>MKL Conseils, éditeur d'EstimationTerrain.fr — contact : contact@estimationterrain.fr</p>
+
+      <h3>Finalités du traitement</h3>
+      <p>Vos données sont collectées pour : (1) réaliser l'estimation automatique de votre terrain ; (2) si vous en faites la demande, vous transmettre une étude personnalisée ; (3) avec votre accord explicite et distinct, vous mettre en relation avec des opérateurs fonciers intéressés par votre bien. Aucune de ces finalités n'implique de démarchage sans votre accord préalable.</p>
+
+      <h3>Données collectées</h3>
+      <p>Adresse et surface du terrain, référence cadastrale, résultats de l'estimation (zone PLU, prix de marché, fourchette de valeur) ; et, si vous demandez une étude ou candidatez comme opérateur : nom, prénom, email, téléphone, et pour les opérateurs, société et zones d'intérêt.</p>
+
+      <h3>Base légale</h3>
+      <p>Votre consentement explicite, recueilli au moment de l'envoi du formulaire. Vous pouvez le retirer à tout moment, sans effet sur les traitements déjà effectués.</p>
+
+      <h3>Destinataires des données</h3>
+      <p>Vos données sont traitées par MKL Conseils. Elles transitent par nos prestataires techniques (hébergement Vercel, gestion des dossiers Airtable) qui n'y accèdent que pour l'exécution du service, jamais à leurs propres fins. Elles ne sont transmises à un opérateur foncier que si vous avez explicitement accepté d'être mis en relation.</p>
+
+      <h3>Durée de conservation</h3>
+      <p>3 ans à compter du dernier contact, sauf demande de suppression anticipée de votre part.</p>
+
+      <h3>Vos droits</h3>
+      <p>Conformément au RGPD, vous disposez d'un droit d'accès, de rectification, d'effacement, de limitation, d'opposition et de portabilité de vos données. Pour exercer ces droits : contact@estimationterrain.fr. Vous disposez également du droit d'introduire une réclamation auprès de la CNIL (cnil.fr).</p>
+
+      <h3>Cookies</h3>
+      <p>Le site utilise uniquement des cookies techniques nécessaires à son fonctionnement (mémorisation de votre choix sur ce bandeau). Aucun cookie de mesure d'audience ou publicitaire n'est déposé sans votre consentement — voir le bandeau affiché lors de votre première visite.</p>
     </div>
   </section>
 </div>
@@ -694,6 +740,7 @@ footer{padding:2rem 1.5rem;flex-direction:column;text-align:center}}
     </div>
     <div class="mfield"><label>Email</label><input type="email" id="m-email" placeholder="marie.dupont@email.com"/></div>
     <div class="mfield"><label>Téléphone</label><input type="tel" id="m-tel" placeholder="06 00 00 00 00"/></div>
+    <label class="consent-row"><input type="checkbox" id="m-consent"/> J'accepte la <a id="m-consent-link">politique de confidentialité</a></label>
     <button class="modal-submit" id="modal-submit">Recevoir mon étude gratuite sous 72h</button>
     <div class="modal-err" id="modal-err">Une erreur est survenue. Veuillez réessayer.</div>
     <div class="modal-ok" id="modal-ok"><div class="modal-ok-title">Demande transmise ✓</div><div class="modal-ok-text">Votre dossier est entre les mains de nos experts. Vous recevrez une analyse complète dans les 72 heures.</div></div>
@@ -709,6 +756,15 @@ footer{padding:2rem 1.5rem;flex-direction:column;text-align:center}}
     <a id="footer-operateurs" style="opacity:.4;font-size:11px">Espace opérateurs fonciers</a>
   </div>
 </footer>
+
+<!-- ══ BANDEAU COOKIES ══════════════════════════════════════════════════════ -->
+<div class="cookie-banner" id="cookie-banner">
+  <p>Ce site utilise uniquement des cookies techniques nécessaires à son fonctionnement. Aucun cookie de mesure d'audience ou publicitaire n'est déposé sans votre accord. <a id="cookie-link">En savoir plus</a></p>
+  <div class="cookie-actions">
+    <button class="cookie-btn cookie-refuse" id="cookie-refuse">Refuser</button>
+    <button class="cookie-btn cookie-accept" id="cookie-accept">Accepter</button>
+  </div>
+</div>
 
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -728,6 +784,20 @@ function showPage(id){
   var nb=document.getElementById('nav-'+id);
   if(nb)nb.classList.add('active');
   window.scrollTo(0,0);
+}
+
+// ─── Bandeau cookies ──────────────────────────────────────────────────────────
+// Aucun cookie de mesure/publicitaire n'existe encore sur le site — ce
+// mécanisme prépare le point d'accroche (localStorage 'cookie_consent') pour
+// quand GA4/Ads seront ajoutés, sans attendre ce moment pour être conforme.
+function initCookieBanner(){
+  var choix;
+  try{choix=localStorage.getItem('cookie_consent')}catch(e){choix=null}
+  if(!choix)document.getElementById('cookie-banner').classList.add('show');
+}
+function repondreCookie(valeur){
+  try{localStorage.setItem('cookie_consent',valeur)}catch(e){}
+  document.getElementById('cookie-banner').classList.remove('show');
 }
 
 // ─── Utilitaires ──────────────────────────────────────────────────────────────
@@ -1067,6 +1137,7 @@ async function envoyerLead(){
   var prenom=document.getElementById('m-prenom').value.trim();
   var email=document.getElementById('m-email').value.trim();
   if(!prenom||!email){alert('Prénom et email obligatoires.');return}
+  if(!document.getElementById('m-consent').checked){alert('Merci d\'accepter la politique de confidentialité pour continuer.');return}
   var btn=document.getElementById('modal-submit');
   btn.textContent='Envoi en cours...';btn.disabled=true;
   var k=document.getElementById('page-simulateur').classList.contains('active')?'s':'h';
@@ -1126,6 +1197,7 @@ async function envoyerOperateur(){
   var email=document.getElementById('op-email').value.trim();
   var societe=document.getElementById('op-societe').value.trim();
   if(!prenom||!email||!societe){alert('Prénom, société et email sont obligatoires.');return}
+  if(!document.getElementById('op-consent').checked){alert('Merci d\'accepter la politique de confidentialité pour continuer.');return}
   var btn=document.getElementById('op-submit-btn');
   btn.textContent='Envoi en cours...';btn.disabled=true;
   var msg='CANDIDATURE OPÉRATEUR — EstimationTerrain.fr\n\n'
@@ -1167,7 +1239,13 @@ document.addEventListener('DOMContentLoaded',function(){
 
   // Footer
   document.getElementById('footer-mentions').addEventListener('click',function(){showPage('mentions')});
-  document.getElementById('footer-confidentialite').addEventListener('click',function(){showPage('mentions')});
+  document.getElementById('footer-confidentialite').addEventListener('click',function(){showPage('confidentialite')});
+  document.getElementById('m-consent-link').addEventListener('click',function(e){e.preventDefault();showPage('confidentialite')});
+  document.getElementById('op-consent-link').addEventListener('click',function(e){e.preventDefault();showPage('confidentialite')});
+  document.getElementById('cookie-link').addEventListener('click',function(e){e.preventDefault();showPage('confidentialite')});
+  document.getElementById('cookie-accept').addEventListener('click',function(){repondreCookie('accepted')});
+  document.getElementById('cookie-refuse').addEventListener('click',function(){repondreCookie('refused')});
+  initCookieBanner();
   document.getElementById('footer-operateurs').addEventListener('click',function(){showPage('operateurs')});
 
   // Simulateurs
