@@ -803,11 +803,7 @@ function repondreCookie(valeur){
 }
 
 // ─── Google Analytics 4 — chargé uniquement si consentement accepté ──────────
-// GA_MEASUREMENT_ID à remplacer par le vrai identifiant (Google Analytics >
-// Admin > Flux de données > flux web, format G-XXXXXXXXXX). Tant qu'il reste
-// à sa valeur par défaut, aucun script Google n'est chargé — pas de fausse
-// mesure, pas de requête réseau inutile.
-const GA_MEASUREMENT_ID='G-XXXXXXXXXX';
+const GA_MEASUREMENT_ID='G-QXVGLJ4P0H';
 var _gaCharge=false;
 function chargerGA4(){
   if(_gaCharge||!GA_MEASUREMENT_ID||GA_MEASUREMENT_ID==='G-XXXXXXXXXX')return;
