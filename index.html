@@ -41,17 +41,17 @@ gtag('config','G-QXVGLJ4P0H');
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700;9..144,800&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bitter:wght@500;600;700;800&family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
   --nuit:#2B2620;--nuit2:#3A342C;--nuit3:#4A4238;
-  --vert:#3C5A44;--vert-dark:#2E4736;--vert-light:#E4EAE1;
-  --blanc:#FAF7F1;--gris:#8A7F6E;--gris-light:#E4DCC9;--texte:#2B2620;
+  --vert:#4FA070;--vert-dark:#3D7D57;--vert-light:#E3F0E7;
+  --blanc:#FCFAF6;--gris:#8A7F6E;--gris-light:#E4DCC9;--texte:#2B2620;
   --or:#A8763E;
-  --font-body:'Work Sans',sans-serif;
-  --font-display:'Fraunces',serif;
+  --font-body:'Archivo',sans-serif;
+  --font-display:'Bitter',serif;
 }
 html{scroll-behavior:smooth}
 body{font-family:var(--font-body);background:var(--blanc);color:var(--texte);line-height:1.6;font-weight:400}
@@ -114,7 +114,7 @@ nav{position:sticky;top:0;z-index:200;background:var(--nuit);border-bottom:1px s
 .sim-result{display:none;margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--nuit3)}
 .res-label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gris);margin-bottom:8px}
 .jauge-bar{height:8px;background:var(--nuit3);border-radius:10px;overflow:hidden;margin-bottom:5px}
-.jauge-fill{height:100%;border-radius:10px;background:linear-gradient(90deg,#ef4444,#A8763E,#3C5A44);transition:width 1.2s cubic-bezier(.4,0,.2,1);width:0%}
+.jauge-fill{height:100%;border-radius:10px;background:linear-gradient(90deg,#ef4444,var(--or),var(--vert));transition:width 1.2s cubic-bezier(.4,0,.2,1);width:0%}
 .jauge-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--gris);margin-bottom:.875rem}
 .res-card{border-radius:10px;padding:.875rem;margin-bottom:.875rem}
 .res-card.faible{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2)}
@@ -886,7 +886,7 @@ async function loadCadastre(k,lat,lon){
       state[k]=Object.assign({},state[k]||{},{cadastre:{surface:surf,section:props.section,numero:props.numero,commune:props.commune}});
       if(maps[k]){
         if(maps[k]._pl)maps[k].removeLayer(maps[k]._pl);
-        var layer=L.geoJSON(d.features[0].geometry,{style:{color:'#3C5A44',weight:2.5,fillOpacity:.15,fillColor:'#3C5A44'}}).addTo(maps[k]);
+        var layer=L.geoJSON(d.features[0].geometry,{style:{color:'#4FA070',weight:2.5,fillOpacity:.15,fillColor:'#4FA070'}}).addTo(maps[k]);
         maps[k]._pl=layer;maps[k].fitBounds(layer.getBounds(),{padding:[20,20]});
       }
     } else {cadEl.textContent='Parcelle non identifiée — vérifiez l\'adresse'}
