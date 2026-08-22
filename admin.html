@@ -144,23 +144,35 @@ tr:hover td{background:#F8FAFC}
 
 <script>
 // ── Auth ──────────────────────────────────────────────────────────────────────
-const PWD = 'ET2024admin'; // Changer ce mot de passe !
-const AIRTABLE_TOKEN = 'patV3Y32egcgcAWtV.387f32b10745f12e2e21ab8ae8fa4df221ff70543da7b1296234bf78d7fdc9c9';
-const AIRTABLE_BASE  = 'applqQPw8cx2pQ8NA';
-const AIRTABLE_TABLE = 'tblzP5PQSTBj4B8LI';
-
-function login(){
-  const v = document.getElementById('pwd-input').value;
-  if(v === PWD){
+// Le mot de passe est vérifié côté serveur (api/admin/login.js, variable
+// d'env ADMIN_PASSWORD) qui pose un cookie httpOnly signé — rien de secret
+// n'est plus embarqué dans cette page.
+async function login(){
+  const pwd = document.getElementById('pwd-input').value;
+  document.getElementById('login-err').textContent='';
+  try {
+    const r = await fetch('/api/admin/login', {
+      method:'POST', credentials:'same-origin',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ password: pwd }),
+    });
+    const d = await r.json();
+    if(!r.ok){
+      document.getElementById('login-err').textContent = d.error || 'Erreur de connexion';
+      return;
+    }
     document.getElementById('login-screen').style.display='none';
     document.getElementById('app').style.display='block';
     loadLeads();
-  } else {
-    document.getElementById('login-err').textContent='Mot de passe incorrect';
+  } catch(e){
+    document.getElementById('login-err').textContent = 'Erreur réseau';
   }
 }
 document.getElementById('pwd-input').addEventListener('keydown', e => { if(e.key==='Enter') login(); });
-function logout(){ location.reload(); }
+async function logout(){
+  try { await fetch('/api/admin/logout', { method:'POST', credentials:'same-origin' }); } catch(e){}
+  location.reload();
+}
 
 // ── Données ───────────────────────────────────────────────────────────────────
 let allRecords = [];
@@ -168,32 +180,32 @@ let currentTab = 'contacts';
 let currentRecord = null;
 
 async function loadLeads(){
-  document.getElementById('table-container').innerHTML='<div class="loading">Chargement depuis Airtable...</div>';
+  document.getElementById('table-container').innerHTML='<div class="loading">Chargement...</div>';
   try {
-    // Récupérer tous les records, triés par date desc
-    let url = `https://api.airtable.com/v0/${AIRTABLE_BASE}/${encodeURIComponent(AIRTABLE_TABLE)}?sort[0][field]=Date&sort[0][direction]=desc&pageSize=100`;
-    let records = [];
-    while(url){
-      const r = await fetch(url, { headers:{ 'Authorization': `Bearer ${AIRTABLE_TOKEN}` } });
-      const d = await r.json();
-      if(d.records) records = [...records, ...d.records];
-      url = d.offset ? `https://api.airtable.com/v0/${AIRTABLE_BASE}/${encodeURIComponent(AIRTABLE_TABLE)}?sort[0][field]=Date&sort[0][direction]=desc&pageSize=100&offset=${d.offset}` : null;
+    const r = await fetch('/api/admin/leads', { credentials:'same-origin' });
+    if(r.status === 401){
+      document.getElementById('app').style.display='none';
+      document.getElementById('login-screen').style.display='flex';
+      document.getElementById('login-err').textContent='Session expirée, reconnectez-vous';
+      return;
     }
-    allRecords = records;
+    const d = await r.json();
+    if(!r.ok) throw new Error(d.error || 'Erreur serveur');
+    allRecords = d.records || [];
     updateStats();
     renderTable();
     document.getElementById('last-update').textContent = `Dernière mise à jour : ${new Date().toLocaleTimeString('fr-FR')}`;
   } catch(e){
-    document.getElementById('table-container').innerHTML=`<div class="empty">Erreur Airtable : ${e.message}</div>`;
+    document.getElementById('table-container').innerHTML=`<div class="empty">Erreur : ${e.message}</div>`;
   }
 }
 
 function updateStats(){
   const today = new Date().toISOString().split('T')[0];
   const weekAgo = new Date(Date.now() - 7*24*3600*1000).toISOString().split('T')[0];
-  const contacts = allRecords.filter(r => r.fields['E-mail']);
-  const todayR = allRecords.filter(r => (r.fields.Date||'').startsWith(today));
-  const weekR  = allRecords.filter(r => (r.fields.Date||'') >= weekAgo);
+  const contacts = allRecords.filter(r => r.email);
+  const todayR = allRecords.filter(r => (r.created_at||'').startsWith(today));
+  const weekR  = allRecords.filter(r => (r.created_at||'') >= weekAgo);
   document.getElementById('stat-total').textContent    = allRecords.length;
   document.getElementById('stat-contacts').textContent = contacts.length;
   document.getElementById('stat-today').textContent    = todayR.length;
@@ -210,9 +222,14 @@ function switchTab(tab){
 
 function fmt(n){ return n ? Math.round(n).toLocaleString('fr-FR') : '—'; }
 
+function fourchetteTexte(rec){
+  if(!rec.val_low || !rec.val_high) return '';
+  return `${Math.round(rec.val_low/1000)}K - ${Math.round(rec.val_high/1000)}K €`;
+}
+
 function renderTable(){
   const records = currentTab === 'contacts'
-    ? allRecords.filter(r => r.fields.Email)
+    ? allRecords.filter(r => r.email)
     : allRecords;
 
   if(!records.length){
@@ -227,22 +244,20 @@ function renderTable(){
     </tr></thead><tbody>`;
 
   for(const rec of records){
-    const f = rec.fields;
-    const date = f.Date ? new Date(f.Date).toLocaleDateString('fr-FR') : '—';
-    const type = f.Type || 'simulation';
-    const badgeClass = f['E-mail'] ? 'badge-contact' : 'badge-sim';
-    const badgeLabel = f['E-mail'] ? '✓ Contact' : 'Simulation';
-    const contact = f['E-mail'] ? `<strong>${f.prenom||''} ${f.Nom||''}</strong><br><small>${f['E-mail']}</small>${f.Tel?'<br><small>'+f.Tel+'</small>':''}` : '<span style="color:#94A3B8">—</span>';
-    const fourchette = f.Fourchette ? `<span class="fourchette">${f.Fourchette}</span>` : '—';
-    const score = f.Score ? `<span style="font-weight:600">${f.Score}/100</span>` : '—';
-    const hasData = f['Val low'] || f['CA TTC'];
+    const date = rec.created_at ? new Date(rec.created_at).toLocaleDateString('fr-FR') : '—';
+    const badgeClass = rec.email ? 'badge-contact' : 'badge-sim';
+    const badgeLabel = rec.email ? '✓ Contact' : 'Simulation';
+    const contact = rec.email ? `<strong>${rec.prenom||''} ${rec.nom||''}</strong><br><small>${rec.email}</small>${rec.tel?'<br><small>'+rec.tel+'</small>':''}` : '<span style="color:#94A3B8">—</span>';
+    const fourchette = fourchetteTexte(rec) ? `<span class="fourchette">${fourchetteTexte(rec)}</span>` : '—';
+    const score = rec.score ? `<span style="font-weight:600">${rec.score}/100</span>` : '—';
+    const hasData = rec.val_low || rec.ca_ttc;
     const btnRapport = hasData ? `<button onclick="openModal('${rec.id}')" style="background:var(--nuit);color:#fff;border:none;padding:5px 10px;border-radius:5px;font-size:11px;cursor:pointer">📄 Rapport</button>` : '';
 
     html += `<tr>
       <td>${date}</td>
       <td><span class="badge-type ${badgeClass}">${badgeLabel}</span></td>
       <td>${contact}</td>
-      <td style="max-width:200px;font-size:12px">${f.Adresse||'—'}</td>
+      <td style="max-width:200px;font-size:12px">${rec.adresse||'—'}</td>
       <td>${fourchette}</td>
       <td>${score}</td>
       <td>${btnRapport}</td>
@@ -257,11 +272,11 @@ function renderTable(){
 function openModal(recordId){
   currentRecord = allRecords.find(r => r.id === recordId);
   if(!currentRecord) return;
-  const f = currentRecord.fields;
+  const f = currentRecord;
   document.getElementById('modal-lead-info').textContent =
-    `${f.prenom||''} ${f.Nom||''} — ${f.Adresse||'Adresse non renseignée'} — ${f.Fourchette||'Fourchette non calculée'}`;
+    `${f.prenom||''} ${f.nom||''} — ${f.adresse||'Adresse non renseignée'} — ${fourchetteTexte(f)||'Fourchette non calculée'}`;
   document.getElementById('r-prenom').value = f.prenom || '';
-  document.getElementById('r-email').value  = f['E-mail']  || '';
+  document.getElementById('r-email').value  = f.email  || '';
   document.getElementById('modal-rapport').classList.add('open');
 }
 
@@ -272,27 +287,27 @@ function closeModal(){
 
 function ouvrirRapport(){
   if(!currentRecord) return;
-  const f = currentRecord.fields;
+  const f = currentRecord;
   const params = new URLSearchParams({
-    adresse:   f.Adresse   || '',
-    surface:   f.Surface   || 0,
-    cadastre:  f.Cadastre  || '',
-    zone:      f['Zone PLU']|| '',
-    shab:      f['SHAB nette'] || 0,
-    prix:      f['Prix marche DVF'] || 0,
-    ca_ttc:    f['CA TTC']  || 0,
-    ca_ht:     f['CA TTC'] ? Math.round(f['CA TTC']/1.20) : 0,
-    travaux:   f['Cout travaux'] || 0,
-    archi:     f['Cout travaux'] ? Math.round(f['Cout travaux']*0.08) : 0,
-    commerc:   f['CA TTC'] ? Math.round(f['CA TTC']*0.05) : 0,
-    financier: f['CA TTC'] ? Math.round(f['CA TTC']*0.04) : 0,
-    marge:     f['Marge promo'] || 0,
-    cf:        f['Charge fonciere'] || 0,
-    ratio:     f['Ratio CF CA'] || 0,
-    low:       f['Val low'] || 0,
-    high:      f['Val high']|| 0,
+    adresse:   f.adresse   || '',
+    surface:   f.surface_terrain || 0,
+    cadastre:  f.cadastre  || '',
+    zone:      f.zone_plu_libelle || '',
+    shab:      f.surface_bati || 0,
+    prix:      f.prix_marche_dvf || 0,
+    ca_ttc:    f.ca_ttc  || 0,
+    ca_ht:     f.ca_ttc ? Math.round(f.ca_ttc/1.20) : 0,
+    travaux:   f.cout_travaux || 0,
+    archi:     f.cout_travaux ? Math.round(f.cout_travaux*0.08) : 0,
+    commerc:   f.ca_ttc ? Math.round(f.ca_ttc*0.05) : 0,
+    financier: f.ca_ttc ? Math.round(f.ca_ttc*0.04) : 0,
+    marge:     f.marge_promo || 0,
+    cf:        f.charge_fonciere || 0,
+    ratio:     f.ratio_cf_ca || 0,
+    low:       f.val_low || 0,
+    high:      f.val_high|| 0,
     ref:       'ET-' + currentRecord.id.substring(0,8).toUpperCase(),
-    email:     f['E-mail'] || '',
+    email:     f.email || '',
     prenom:    f.prenom || '',
   });
   window.open('/rapport?' + params.toString(), '_blank');
@@ -300,11 +315,11 @@ function ouvrirRapport(){
 
 function envoyerGmail(){
   if(!currentRecord) return;
-  const f = currentRecord.fields;
+  const f = currentRecord;
   const prenom = f.prenom || '';
-  const email = f['E-mail'] || '';
-  const adresse = f.Adresse || 'votre bien';
-  const fourchette = f.Fourchette || '';
+  const email = f.email || '';
+  const adresse = f.adresse || 'votre bien';
+  const fourchette = fourchetteTexte(f);
   const sujet = encodeURIComponent('EstimationTerrain.fr — Étude de potentiel foncier — ' + adresse);
   const corps = encodeURIComponent(
     'Bonjour ' + prenom + ',\n\n' +
