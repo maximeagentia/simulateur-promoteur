@@ -104,7 +104,7 @@ async function traiterCommune(doc) {
       document_upload_date: uploadDate,
       date_extraction: new Date().toISOString(),
     });
-    resultatsZones.push({ zone: zoneCode, statut: extraction.statut });
+    resultatsZones.push({ zone: zoneCode, statut: extraction.statut, erreur: extraction.erreur });
   }
 
   await upsertDocument(insee, {
