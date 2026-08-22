@@ -262,6 +262,28 @@ nav{position:sticky;top:0;z-index:200;background:var(--nuit);border-bottom:1px s
 
 .cookie-banner{display:none;position:fixed;left:0;right:0;bottom:0;z-index:2000;background:var(--nuit);border-top:1px solid var(--nuit3);padding:1rem 1.25rem;box-shadow:0 -8px 24px rgba(0,0,0,.3);gap:1rem;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .cookie-banner.show{display:flex}
+
+.floating-cta{
+  position:fixed;right:20px;bottom:20px;z-index:900;
+  display:flex;align-items:center;gap:8px;
+  background:var(--vert);color:#12140f;border:none;border-radius:999px;
+  padding:13px 20px 13px 16px;font-family:var(--font-body);font-size:14px;font-weight:700;
+  box-shadow:0 6px 20px rgba(0,0,0,.22);cursor:pointer;
+  opacity:0;pointer-events:none;transform:translateY(12px) scale(.94);
+  transition:opacity .25s ease,transform .25s ease,background .2s ease,box-shadow .2s ease;
+}
+.floating-cta.show{opacity:1;pointer-events:auto;transform:translateY(0) scale(1)}
+.floating-cta.above-cookie-banner{bottom:96px}
+.floating-cta:hover{background:var(--vert-dark);box-shadow:0 8px 26px rgba(0,0,0,.28);transform:translateY(-2px)}
+.floating-cta-dot{width:8px;height:8px;border-radius:50%;background:#12140f;flex-shrink:0;animation:floating-pulse 2s ease-in-out infinite}
+@keyframes floating-pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@media (prefers-reduced-motion: reduce){
+  .floating-cta{transition:opacity .15s linear}
+  .floating-cta-dot{animation:none}
+}
+@media (max-width:640px){
+  .floating-cta{right:14px;bottom:14px;padding:12px 18px 12px 14px;font-size:13px}
+}
 .cookie-banner p{margin:0;font-size:12.5px;color:var(--gris);line-height:1.5;max-width:640px}
 .cookie-banner a{color:var(--vert);text-decoration:underline;cursor:pointer}
 .cookie-actions{display:flex;gap:.6rem;flex-shrink:0}
@@ -336,7 +358,7 @@ footer{padding:2rem 1.5rem;flex-direction:column;text-align:center}}
 
 <!-- ══ ACCUEIL ══════════════════════════════════════════════════════════════ -->
 <div class="page active" id="page-accueil">
-  <div class="hero">
+  <div class="hero" id="simulateur">
     <div class="hero-left">
       <div class="hero-badge">Estimation gratuite · Indépendant de tout promoteur</div>
       <h1>Votre terrain vaut<br>peut-être bien plus<br><em>que ce qu'on vous propose.</em></h1>
@@ -773,6 +795,14 @@ footer{padding:2rem 1.5rem;flex-direction:column;text-align:center}}
   </div>
 </footer>
 
+<!-- ══ BOUTON FLOTTANT ═════════════════════════════════════════════════════
+     Apparaît une fois le hero (formulaire principal) hors champ, pour
+     garder l'accès à la simulation partout sur la page sans dupliquer le
+     formulaire lui-même — remonte simplement vers #simulateur. -->
+<button class="floating-cta" id="floating-cta" onclick="document.getElementById('simulateur').scrollIntoView({behavior:'smooth'})">
+  <span class="floating-cta-dot"></span>Estimer mon terrain
+</button>
+
 <!-- ══ BANDEAU COOKIES ══════════════════════════════════════════════════════ -->
 <div class="cookie-banner" id="cookie-banner">
   <p>Ce site utilise uniquement des cookies techniques nécessaires à son fonctionnement. Aucun cookie de mesure d'audience ou publicitaire n'est déposé sans votre accord. <a id="cookie-link">En savoir plus</a></p>
@@ -810,12 +840,18 @@ function showPage(id){
 function initCookieBanner(){
   var choix;
   try{choix=localStorage.getItem('cookie_consent')}catch(e){choix=null}
-  if(!choix)document.getElementById('cookie-banner').classList.add('show');
+  if(!choix){
+    document.getElementById('cookie-banner').classList.add('show');
+    // Le bandeau (pleine largeur, z-index supérieur) recouvrirait sinon le
+    // bouton flottant, qui partage le même coin bas-droite.
+    document.getElementById('floating-cta').classList.add('above-cookie-banner');
+  }
   else if(choix==='accepted')accorderConsentement();
 }
 function repondreCookie(valeur){
   try{localStorage.setItem('cookie_consent',valeur)}catch(e){}
   document.getElementById('cookie-banner').classList.remove('show');
+  document.getElementById('floating-cta').classList.remove('above-cookie-banner');
   if(valeur==='accepted')accorderConsentement();
 }
 function accorderConsentement(){
@@ -1269,6 +1305,15 @@ document.addEventListener('DOMContentLoaded',function(){
   document.getElementById('cookie-refuse').addEventListener('click',function(){repondreCookie('refused')});
   initCookieBanner();
   document.getElementById('footer-operateurs').addEventListener('click',function(){showPage('operateurs')});
+
+  // Bouton flottant : visible dès que le hero (formulaire principal) sort du champ.
+  var heroEl=document.getElementById('simulateur');
+  var floatBtn=document.getElementById('floating-cta');
+  if(heroEl&&floatBtn&&'IntersectionObserver' in window){
+    new IntersectionObserver(function(entries){
+      floatBtn.classList.toggle('show',!entries[0].isIntersecting);
+    },{threshold:0}).observe(heroEl);
+  }
 
   // Simulateurs
   document.getElementById('adr-h').addEventListener('input',function(){onAdrInput(this.value,'h')});
