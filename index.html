@@ -87,6 +87,21 @@ nav{position:sticky;top:0;z-index:200;background:var(--nuit);border-bottom:1px s
 .sim-box{background:var(--nuit);border:1px solid var(--nuit3);border-radius:16px;padding:1.75rem;width:100%;max-width:440px}
 .sim-box-title{font-family:var(--font-display);font-size:.95rem;font-weight:700;color:#fff;margin-bottom:.25rem}
 .sim-box-sub{font-size:12px;color:var(--gris);margin-bottom:1.25rem}
+
+.funnel-steps{display:flex;align-items:center;margin-bottom:1.5rem}
+.funnel-step{display:flex;flex-direction:column;align-items:center;gap:5px;flex-shrink:0}
+.funnel-dot{
+  width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;color:var(--gris);background:var(--nuit2);border:1.5px solid var(--nuit3);
+  transition:background .3s ease,border-color .3s ease,color .3s ease;
+}
+.funnel-label{font-size:10px;color:var(--gris);letter-spacing:.02em;white-space:nowrap}
+.funnel-line{flex:1;height:1.5px;background:var(--nuit3);margin:0 6px 17px;transition:background .3s ease}
+.funnel-step.active .funnel-dot{background:var(--vert);border-color:var(--vert);color:#12140f}
+.funnel-step.active .funnel-label{color:var(--vert)}
+.funnel-step.done .funnel-dot{background:var(--vert-dark);border-color:var(--vert-dark);color:#fff}
+.funnel-step.done .funnel-label{color:var(--gris)}
+.funnel-step.done + .funnel-line{background:var(--vert-dark)}
 .sfield{margin-bottom:.875rem;position:relative}
 .sfield label{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gris);margin-bottom:5px}
 .sfield input,.sfield select{width:100%;padding:10px 14px;background:var(--nuit2);border:1px solid var(--nuit3);border-radius:8px;font-size:14px;font-family:var(--font-body);color:#fff;outline:none;transition:border .2s}
@@ -334,10 +349,17 @@ footer a:hover{color:var(--vert)}
 .choc-grid{grid-template-columns:1fr;gap:1rem}.choc-arrow{display:none}
 .why-grid,.services-grid,.avis-grid,.ops-cards{grid-template-columns:1fr}
 .temo-inner,.about-inner{grid-template-columns:1fr;gap:2.5rem}
-.nav-links{gap:0}.nav-link{padding:8px 6px;font-size:11px}
+.nav-links{gap:0;overflow-x:auto;justify-content:flex-start;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.nav-links::-webkit-scrollbar{display:none}
+.nav-link{padding:8px 6px;font-size:11px}
 .about-values{grid-template-columns:1fr}
 .ops-stats{gap:1.5rem;flex-wrap:wrap}
 footer{padding:2rem 1.5rem;flex-direction:column;text-align:center}}
+@media(max-width:600px){
+/* En dessous de 600px, logo + CTA du nav ne laissent plus de place au menu
+   (mesuré : 0px de large sur un iPhone standard 390px). Le bouton flottant
+   ajouté plus bas sur la page fait déjà le même travail que ce CTA. */
+.nav-cta{display:none}}
 </style>
 </head>
 <body>
@@ -374,6 +396,13 @@ footer{padding:2rem 1.5rem;flex-direction:column;text-align:center}}
       <div class="sim-box">
         <div class="sim-box-title">Ce que vaut vraiment votre terrain</div>
         <div class="sim-box-sub">Le même calcul que les promoteurs · Résultat en 60 secondes</div>
+        <div class="funnel-steps" id="funnel-h">
+          <div class="funnel-step active" data-step="1"><span class="funnel-dot">1</span><span class="funnel-label">Adresse</span></div>
+          <div class="funnel-line"></div>
+          <div class="funnel-step" data-step="2"><span class="funnel-dot">2</span><span class="funnel-label">Parcelle</span></div>
+          <div class="funnel-line"></div>
+          <div class="funnel-step" data-step="3"><span class="funnel-dot">3</span><span class="funnel-label">Résultat</span></div>
+        </div>
         <input class="hp" type="text" name="website" tabindex="-1" autocomplete="off" id="hp1"/>
         <div class="sfield">
           <label>Adresse du bien</label>
@@ -532,6 +561,13 @@ footer{padding:2rem 1.5rem;flex-direction:column;text-align:center}}
         <p style="font-size:14px;color:var(--gris)">Données cadastrales officielles · Résultat immédiat · Sans inscription</p>
       </div>
       <div class="sim-box" style="max-width:none">
+        <div class="funnel-steps" id="funnel-s">
+          <div class="funnel-step active" data-step="1"><span class="funnel-dot">1</span><span class="funnel-label">Adresse</span></div>
+          <div class="funnel-line"></div>
+          <div class="funnel-step" data-step="2"><span class="funnel-dot">2</span><span class="funnel-label">Parcelle</span></div>
+          <div class="funnel-line"></div>
+          <div class="funnel-step" data-step="3"><span class="funnel-dot">3</span><span class="funnel-label">Résultat</span></div>
+        </div>
         <input class="hp" type="text" name="website2" tabindex="-1" autocomplete="off" id="hp2"/>
         <div class="sfield">
           <label>Adresse du bien</label>
@@ -799,7 +835,7 @@ footer{padding:2rem 1.5rem;flex-direction:column;text-align:center}}
      Apparaît une fois le hero (formulaire principal) hors champ, pour
      garder l'accès à la simulation partout sur la page sans dupliquer le
      formulaire lui-même — remonte simplement vers #simulateur. -->
-<button class="floating-cta" id="floating-cta" onclick="document.getElementById('simulateur').scrollIntoView({behavior:'smooth'})">
+<button class="floating-cta" id="floating-cta" onclick="showPage('simulateur')">
   <span class="floating-cta-dot"></span>Estimer mon terrain
 </button>
 
@@ -858,6 +894,17 @@ function accorderConsentement(){
   gtag('consent','update',{'analytics_storage':'granted'});
 }
 
+// ─── Progression du funnel (indicateur visuel, n'affecte pas la logique) ──────
+function setStep(k,n){
+  var wrap=document.getElementById('funnel-'+k);
+  if(!wrap)return;
+  wrap.querySelectorAll('.funnel-step').forEach(function(el){
+    var s=parseInt(el.dataset.step,10);
+    el.classList.toggle('done',s<n);
+    el.classList.toggle('active',s===n);
+  });
+}
+
 // ─── Utilitaires ──────────────────────────────────────────────────────────────
 function isBot(){return document.getElementById('hp1').value||document.getElementById('hp2').value||document.getElementById('hp3').value}
 function toggleFaq(el){el.classList.toggle('open');el.querySelector('.faq-icon').textContent=el.classList.contains('open')?'−':'+'}
@@ -892,7 +939,7 @@ async function pickAdr(idx,k){
   var lon=f.geometry.coordinates[0];var lat=f.geometry.coordinates[1];
   document.getElementById('adr-'+k).value=p.label;hideAC(k);
   state[k]={lat:lat,lon:lon,insee:p.citycode,label:p.label,_adresse:p.label,_surface:parseFloat(document.getElementById('surf-'+k).value)||0};
-  initMap(k,lat,lon);loadCadastre(k,lat,lon);
+  initMap(k,lat,lon);loadCadastre(k,lat,lon);setStep(k,2);
 }
 
 // ─── Carte Leaflet ────────────────────────────────────────────────────────────
@@ -950,6 +997,7 @@ function scoreFromData(data,terrain){
 
 // ─── Affichage résultat — version vendeur ─────────────────────────────────────
 function afficherResultat(k,data){
+  setStep(k,3);
   var bilan=data.bilan||{};
   var terrain=document.getElementById('surf-'+k).value;
   var zoneLibelle=(data.zone_plu&&data.zone_plu.libelle)||(data.zone&&data.zone.libelle)||'Zone identifiée';
