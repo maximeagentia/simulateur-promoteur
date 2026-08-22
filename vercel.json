@@ -3,6 +3,7 @@
   "routes": [
     { "src": "/api/plu",              "dest": "/api/plu.js" },
     { "src": "/api/airtable",         "dest": "/api/airtable.js" },
+    { "src": "/api/simulation",       "dest": "/api/simulation.js" },
     { "src": "/api/sheet",            "dest": "/api/sheet.js" },
     { "src": "/api/rapport",          "dest": "/api/rapport.js" },
     { "src": "/api/cron/extract-plu", "dest": "/api/cron/extract-plu.js" },

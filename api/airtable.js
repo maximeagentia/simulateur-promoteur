@@ -27,9 +27,13 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: 'Invalid JSON body' });
   }
 
-  const TOKEN = 'patV3Y32egcgcAWtV.387f32b10745f12e2e21ab8ae8fa4df221ff70543da7b1296234bf78d7fdc9c9';
-  const BASE  = 'applqQPw8cx2pQ8NA';
-  const TABLE = 'tblzP5PQSTBj4B8LI';
+  const TOKEN = process.env.AIRTABLE_TOKEN;
+  const BASE  = process.env.AIRTABLE_BASE_ID || 'applqQPw8cx2pQ8NA';
+  const TABLE = process.env.AIRTABLE_TABLE_ID || 'tblzP5PQSTBj4B8LI';
+  if (!TOKEN) {
+    console.warn('[airtable] AIRTABLE_TOKEN non configuré — écriture ignorée');
+    return res.status(200).json({ ok: true, mode: 'dev_no_airtable' });
+  }
   const recordId = body._recordId || null;
 
   // Champs — noms simples, cohérents avec la table Airtable

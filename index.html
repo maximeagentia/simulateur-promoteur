@@ -1278,7 +1278,7 @@ async function envoyerLead(){
     // Airtable — enregistrement contact complet
     var d=state[k]||{};var vt2=d._bilan&&d._bilan.valeur_terrain;
     // POST complet avec coordonnées contact + toutes les données bilan
-    sendToAirtable({type:'contact',prenom:prenom,nom:nom,email:email,tel:tel,
+    sendToAirtable({type:'contact',_k:k,prenom:prenom,nom:nom,email:email,tel:tel,
       adresse:d._adresse||document.getElementById('adr-'+k).value||'',
       surface:d._surface||parseFloat(document.getElementById('surf-'+k).value)||0,
       cadastre:d._cadastre||(state[k]&&state[k].cadastre?(state[k].cadastre.section||'')+(state[k].cadastre.numero||'')+' ('+(state[k].cadastre.surface||'')+'m²)':''),
@@ -1453,7 +1453,9 @@ function ouvrirRapport(k){
 var _airtableId={}; // stocke l'ID par simulateur (h ou s)
 async function sendToAirtable(payload){
   try{
-    var k=payload._k||'h'; delete payload._k;
+    var k=payload._k||'h';
+    sendToSupabase(payload,k); // même payload + lat/lon/insee depuis state[k]
+    delete payload._k;
     var resp=await fetch(VERCEL+'/api/airtable',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
@@ -1462,6 +1464,21 @@ async function sendToAirtable(payload){
     var data=await resp.json();
     if(data&&data.id&&payload.type==='simulation') _airtableId[k]=data.id;
   }catch(e){console.warn('[airtable]',e);}
+}
+
+// Source de vérité pour le dashboard admin — voir api/simulation.js.
+// Appelé en parallèle de sendToAirtable pendant la transition.
+async function sendToSupabase(payload,k){
+  try{
+    var s=state[k]||{};
+    var body=Object.assign({},payload,{lat:s.lat,lon:s.lon,insee_commune:s.insee});
+    delete body._k;
+    await fetch(VERCEL+'/api/simulation',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(body)
+    });
+  }catch(e){console.warn('[supabase]',e);}
 }
 </script>
 </body>

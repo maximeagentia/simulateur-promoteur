@@ -77,6 +77,19 @@ async function amorcerCommunesCibles(communes) {
   }
 }
 
+// ── Utilisée par api/simulation.js ──────────────────────────────────────────
+
+// Retourne l'id inséré, ou null si Supabase n'est pas configuré (le
+// formulaire continue de fonctionner sans — même principe que le reste
+// de ce module).
+async function insererSimulation(champs) {
+  const sb = getSupabase();
+  if (!sb) return null;
+  const { data, error } = await sb.from('simulations').insert(champs).select('id').single();
+  if (error) { console.error('[supabase] insererSimulation:', error.message); return null; }
+  return data.id;
+}
+
 module.exports = {
   getSupabase,
   getZonePLUFromSupabase,
@@ -84,4 +97,5 @@ module.exports = {
   upsertDocument,
   upsertZonePLU,
   amorcerCommunesCibles,
+  insererSimulation,
 };
