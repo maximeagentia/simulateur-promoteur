@@ -3,6 +3,7 @@
 // 1×/jour et converger progressivement, pas pour tout traiter d'un coup
 // (limites d'exécution Vercel + coût API maîtrisé).
 
+const pdfParse = require('pdf-parse');
 const {
   getDocumentsATraiter,
   upsertDocument,
@@ -16,14 +17,19 @@ const { getCommunesCibles } = require('../_lib/plu-communes-cibles');
 const BATCH_COMMUNES = parseInt(process.env.PLU_CRON_BATCH || '2', 10);
 const MAX_ZONES_PAR_COMMUNE = parseInt(process.env.PLU_CRON_MAX_ZONES || '10', 10);
 
-async function fetchPdfBase64(url) {
+// Extrait le texte du règlement au lieu d'envoyer le PDF (pages-image) à
+// Claude — un règlement PLU est presque toujours du texte natif, pas un
+// scan, donc pdf-parse (gratuit, local, pas de service tiers) suffit et
+// coûte bien moins de tokens qu'un document PDF pour le même contenu.
+async function fetchPdfTexte(url) {
   const ctrl = new AbortController();
   const tid = setTimeout(() => ctrl.abort(), 25000);
   try {
     const r = await fetch(url, { signal: ctrl.signal });
     if (!r.ok) return null;
     const buf = Buffer.from(await r.arrayBuffer());
-    return buf.toString('base64');
+    const { text } = await pdfParse(buf);
+    return text && text.trim() ? text : null;
   } catch { return null; }
   finally { clearTimeout(tid); }
 }
@@ -68,9 +74,9 @@ async function traiterCommune(doc) {
     return { ...resume, statut: 'pas_de_pdf' };
   }
 
-  const pdfBase64 = await fetchPdfBase64(pdfUrl);
-  if (!pdfBase64) {
-    await upsertDocument(insee, { last_checked_at: new Date().toISOString(), extraction_status: 'echec', derniere_erreur: 'Échec téléchargement PDF' });
+  const texteReglement = await fetchPdfTexte(pdfUrl);
+  if (!texteReglement) {
+    await upsertDocument(insee, { last_checked_at: new Date().toISOString(), extraction_status: 'echec', derniere_erreur: 'Échec téléchargement ou extraction texte du PDF' });
     return { ...resume, statut: 'pdf_inaccessible' };
   }
 
@@ -82,7 +88,7 @@ async function traiterCommune(doc) {
 
   const resultatsZones = [];
   for (const zoneCode of zones) {
-    const extraction = await extraireReglesZone(pdfBase64, zoneCode);
+    const extraction = await extraireReglesZone(texteReglement, zoneCode);
     if (!extraction) continue; // ANTHROPIC_API_KEY absent -> pas d'extraction possible
     await upsertZonePLU(insee, zoneCode, {
       commune_nom: doc.commune_nom || null,

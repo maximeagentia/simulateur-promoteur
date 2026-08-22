@@ -55,10 +55,21 @@ function champVerifie(valeur, estRatio, texteGrounding) {
   return variantesTexte(valeur, estRatio).some(v => texteGrounding.includes(v));
 }
 
-// pdfBase64 : contenu du règlement (PDF) encodé en base64.
+// texteReglement : texte du règlement (PDF pré-extrait via pdf-parse côté
+// appelant — évite d'envoyer le PDF en pages-image à Claude, bien plus cher
+// en tokens qu'un document texte pour un règlement qui est presque toujours
+// du texte natif, pas un scan).
+//
+// cache_control sur le bloc document : traiterCommune() appelle cette
+// fonction jusqu'à MAX_ZONES_PAR_COMMUNE fois avec le même texteReglement —
+// sans cache, on repaierait le plein tarif à chaque zone pour le même
+// contenu. Avec, seule la première zone paie l'écriture en cache ; les
+// suivantes lisent le cache à ~10% du prix (tant qu'elles s'enchaînent dans
+// la fenêtre de cache, ce qui est le cas ici, appels synchrones en boucle).
+//
 // Retourne { ces, hauteur_m, recul_facade_m, recul_limites_m, citation,
 //            citation_verifiee, statut } ou null si l'appel échoue.
-async function extraireReglesZone(pdfBase64, zoneCode) {
+async function extraireReglesZone(texteReglement, zoneCode) {
   const client = getClient();
   if (!client) return null;
 
@@ -72,8 +83,9 @@ async function extraireReglesZone(pdfBase64, zoneCode) {
         content: [
           {
             type: 'document',
-            source: { type: 'base64', media_type: 'application/pdf', data: pdfBase64 },
+            source: { type: 'text', media_type: 'text/plain', data: texteReglement },
             citations: { enabled: true },
+            cache_control: { type: 'ephemeral' },
           },
           { type: 'text', text: PROMPT_ZONE(zoneCode) },
         ],
