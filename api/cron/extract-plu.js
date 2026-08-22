@@ -80,7 +80,7 @@ async function traiterCommune(doc) {
     return { ...resume, statut: 'pdf_inaccessible' };
   }
 
-  const zones = (await getZonesPourCommune(insee)).slice(0, MAX_ZONES_PAR_COMMUNE);
+  const zones = (await getZonesPourCommune(docGpu.partition)).slice(0, MAX_ZONES_PAR_COMMUNE);
   if (!zones.length) {
     await upsertDocument(insee, { last_checked_at: new Date().toISOString(), extraction_status: 'echec', derniere_erreur: 'Aucune zone trouvée pour cette commune' });
     return { ...resume, statut: 'pas_de_zones' };
